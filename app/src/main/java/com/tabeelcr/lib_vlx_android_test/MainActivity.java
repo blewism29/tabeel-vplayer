@@ -67,7 +67,7 @@ public class MainActivity extends AppCompatActivity {
                     case MediaPlayer.Event.EncounteredError:
                         // Replay the stream
                         // Logic to replay if buffering is taking too long.
-                        cancel();
+                        stop();
                         play();
                         break;
                     case MediaPlayer.Event.EndReached:
@@ -83,6 +83,10 @@ public class MainActivity extends AppCompatActivity {
         mMediaPlayer.release();
         mLibVLC.release();
         mMediaPlayer.detachViews();
+    }
+
+    public void stop() {
+        mMediaPlayer.stop();
     }
 
     private void play() {
