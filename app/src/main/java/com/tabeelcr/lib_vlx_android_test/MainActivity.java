@@ -20,6 +20,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    private boolean authorized;
     private static final boolean USE_TEXTURE_VIEW = false;
     private static final boolean ENABLE_SUBTITLES = false;
     private VLCVideoLayout mVideoLayout = null;
@@ -32,7 +33,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        if (checkAuthorization()) {
+        authorized = checkAuthorization();
+
+        if (authorized) {
             final ArrayList<String> options = new ArrayList<>();
             options.add("--aout=opensles");
             options.add("--audio-time-stretch"); // time stretching
@@ -59,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        if (checkAuthorization()) {
+        if (authorized) {
             mMediaPlayer.release();
             mLibVLC.release();
         }
@@ -109,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void play() {
-        if (checkAuthorization()) {
+        if (authorized) {
             final String streamUrl = getString(R.string.stream_url);
             final Media media = new Media(mLibVLC, Uri.parse(streamUrl));
 
