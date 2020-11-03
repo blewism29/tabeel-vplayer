@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.widget.Toast;
 
 import org.videolan.libvlc.LibVLC;
@@ -23,7 +24,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean authorized;
     private static final boolean USE_TEXTURE_VIEW = false;
     private static final boolean ENABLE_SUBTITLES = false;
-    private VLCVideoLayout mVideoLayout = null;
 
     private LibVLC mLibVLC;
     private MediaPlayer mMediaPlayer;
@@ -34,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         authorized = checkAuthorization();
+        authorized = true;
 
         if (authorized) {
             final ArrayList<String> options = new ArrayList<>();
@@ -43,9 +44,26 @@ public class MainActivity extends AppCompatActivity {
 
             mLibVLC = new LibVLC(this, options);
             mMediaPlayer = new MediaPlayer(mLibVLC);
-            // mMediaPlayer.setEventListener(getListener());
 
-            mVideoLayout = findViewById(R.id.video_layout);
+            VLCVideoLayout mVideoLayout = findViewById(R.id.video_layout);
+            mMediaPlayer.attachViews(mVideoLayout, null, ENABLE_SUBTITLES, USE_TEXTURE_VIEW);
+
+            mMediaPlayer.setEventListener(new MediaPlayer.EventListener() {
+                @Override
+                public void onEvent(MediaPlayer.Event event) {
+                    switch (event.type) {
+                        case MediaPlayer.Event.Buffering:
+                            restartPlayerIn(30000);
+                            break;
+                        case MediaPlayer.Event.EncounteredError:
+                            restartPlayerIn(5000);
+                            break;
+                        case MediaPlayer.Event.EndReached:
+                            cancel();
+                            break;
+                    }
+                }
+            });
         } else {
             final String unauthorizedMessage = getString(R.string.unauthorized_message);
             Context context = getApplicationContext();
@@ -80,26 +98,6 @@ public class MainActivity extends AppCompatActivity {
         cancel();
     }
 
-    private MediaPlayer.EventListener getListener () {
-        return new MediaPlayer.EventListener() {
-            @Override
-            public void onEvent(MediaPlayer.Event event) {
-                switch (event.type) {
-                    case MediaPlayer.Event.Buffering:
-                    case MediaPlayer.Event.EncounteredError:
-                        // Replay the stream
-                        // Logic to replay if buffering is taking too long.
-                        stop();
-                        play();
-                        break;
-                    case MediaPlayer.Event.EndReached:
-                        cancel();
-                        break;
-                }
-            }
-        };
-    }
-
     private void cancel() {
         mMediaPlayer.stop();
         mMediaPlayer.release();
@@ -116,12 +114,24 @@ public class MainActivity extends AppCompatActivity {
             final String streamUrl = getString(R.string.stream_url);
             final Media media = new Media(mLibVLC, Uri.parse(streamUrl));
 
-            mMediaPlayer.attachViews(mVideoLayout, null, ENABLE_SUBTITLES, USE_TEXTURE_VIEW);
             mMediaPlayer.setMedia(media);
-
             media.release();
 
             mMediaPlayer.play();
+        }
+    }
+
+    private void restartPlayerIn(int milliseconds) {
+        if (!mMediaPlayer.isPlaying()) {
+            new CountDownTimer(milliseconds, 1000) {
+                @Override
+                public void onTick(long l) {
+
+                }
+                public void onFinish() {
+                    play();
+                }
+            }.start();
         }
     }
 
