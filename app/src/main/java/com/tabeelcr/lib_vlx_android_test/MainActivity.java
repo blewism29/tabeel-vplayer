@@ -6,6 +6,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.util.Log;
 import android.widget.Toast;
 
 import org.videolan.libvlc.LibVLC;
@@ -34,7 +35,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         authorized = checkAuthorization();
-        authorized = true;
 
         if (authorized) {
             final ArrayList<String> options = new ArrayList<>();
@@ -53,13 +53,24 @@ public class MainActivity extends AppCompatActivity {
                 public void onEvent(MediaPlayer.Event event) {
                     switch (event.type) {
                         case MediaPlayer.Event.Buffering:
+                            //restartPlayerIn(30000);
+                            //Toast toast = Toast.makeText(getApplicationContext(),"Buffering ....",Toast.LENGTH_LONG);
+                            //toast.show();
+                            Log.e("TAVO -------->", "Event Bufferring .......");
+                            break;
+                        case MediaPlayer.Event.Stopped:
+                            //Toast toast2 = Toast.makeText(getApplicationContext(),"Reiniciando  ....",Toast.LENGTH_LONG);
+                            //toast2.show();
+                            Log.e("TAVO -------->", "Event Stopped ....... isPlaying: " + mMediaPlayer.isPlaying());
                             restartPlayerIn(30000);
                             break;
                         case MediaPlayer.Event.EncounteredError:
+                            Log.e("TAVO -------->", "Event EncounteredError ....... isPlaying: " + mMediaPlayer.isPlaying());
                             restartPlayerIn(5000);
                             break;
                         case MediaPlayer.Event.EndReached:
-                            cancel();
+                            Log.e("TAVO -------->", "Event EndReached ....... isPlaying: " + mMediaPlayer.isPlaying());
+                            restartPlayerIn(1000);
                             break;
                     }
                 }
@@ -67,7 +78,7 @@ public class MainActivity extends AppCompatActivity {
         } else {
             final String unauthorizedMessage = getString(R.string.unauthorized_message);
             Context context = getApplicationContext();
-            int duration = Toast.LENGTH_SHORT;
+            int duration = Toast.LENGTH_LONG;
 
             Toast toast = Toast.makeText(context, unauthorizedMessage, duration);
             toast.show();
@@ -122,7 +133,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void restartPlayerIn(int milliseconds) {
+        Log.e("TAVO -------->", "restartPlayerIn .......");
         if (!mMediaPlayer.isPlaying()) {
+            Log.e("TAVO -------->", "NO PLaying restartPlayerIn .......");
             new CountDownTimer(milliseconds, 1000) {
                 @Override
                 public void onTick(long l) {
@@ -176,5 +189,4 @@ public class MainActivity extends AppCompatActivity {
         }
         return "";
     }
-
 }
