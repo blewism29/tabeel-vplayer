@@ -15,10 +15,12 @@ import org.videolan.libvlc.MediaPlayer;
 import org.videolan.libvlc.util.VLCVideoLayout;
 
 import java.net.NetworkInterface;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.tabeelcr.lib_vlx_android_test.RestartService;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -29,12 +31,15 @@ public class MainActivity extends AppCompatActivity {
     private LibVLC mLibVLC;
     private MediaPlayer mMediaPlayer;
 
+    private long timeChanged;
+    private boolean playing = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        authorized = checkAuthorization();
+        authorized = true; //checkAuthorization();
 
         if (authorized) {
             final ArrayList<String> options = new ArrayList<>();
@@ -52,29 +57,40 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onEvent(MediaPlayer.Event event) {
                     switch (event.type) {
+                        case MediaPlayer.Event.Vout:
+                            Log.i("MediaPlayer.Event", "Vout");
+                        case MediaPlayer.Event.PositionChanged:
+                            Log.i("MediaPlayer.Event", "Paused");
+                        case MediaPlayer.Event.Paused:
+                            Log.i("MediaPlayer.Event", "Paused");
+                            playing = false;
+                        case MediaPlayer.Event.Playing:
+                            Log.i("MediaPlayer.Event", "Playing");
+                            playing = true;
+                        case MediaPlayer.Event.TimeChanged:
+                            if (timeChanged == event.getTimeChanged()) playing = false;
+                            timeChanged = event.getTimeChanged() != 0 ? event.getTimeChanged() : timeChanged;
+                            Log.i("MediaPlayer.Event", "TimeChanged " + event.getTimeChanged());
                         case MediaPlayer.Event.Buffering:
-                            //restartPlayerIn(30000);
-                            //Toast toast = Toast.makeText(getApplicationContext(),"Buffering ....",Toast.LENGTH_LONG);
-                            //toast.show();
-                            Log.e("TAVO -------->", "Event Bufferring .......");
+                            Log.i("MediaPlayer.Event", "Buffering");
                             break;
                         case MediaPlayer.Event.Stopped:
-                            //Toast toast2 = Toast.makeText(getApplicationContext(),"Reiniciando  ....",Toast.LENGTH_LONG);
-                            //toast2.show();
-                            Log.e("TAVO -------->", "Event Stopped ....... isPlaying: " + mMediaPlayer.isPlaying());
+                            Log.i("MediaPlayer.Event", "Event Stopped ....... isPlaying: " + mMediaPlayer.isPlaying());
                             restartPlayerIn(30000);
                             break;
                         case MediaPlayer.Event.EncounteredError:
-                            Log.e("TAVO -------->", "Event EncounteredError ....... isPlaying: " + mMediaPlayer.isPlaying());
+                            Log.i("MediaPlayer.Event", "Event EncounteredError ....... isPlaying: " + mMediaPlayer.isPlaying());
                             restartPlayerIn(5000);
                             break;
                         case MediaPlayer.Event.EndReached:
-                            Log.e("TAVO -------->", "Event EndReached ....... isPlaying: " + mMediaPlayer.isPlaying());
+                            Log.i("MediaPlayer.Event", "Event EndReached ....... isPlaying: " + mMediaPlayer.isPlaying());
                             restartPlayerIn(1000);
                             break;
                     }
                 }
             });
+
+            checkPlayer(1000 * 90);
         } else {
             final String unauthorizedMessage = getString(R.string.unauthorized_message);
             Context context = getApplicationContext();
@@ -84,6 +100,12 @@ public class MainActivity extends AppCompatActivity {
             toast.show();
 
             this.finishAffinity();
+        }
+
+        try {
+            RestartService.getInstance().setTimer(this, MainActivity.class);
+        } catch (ParseException e) {
+            e.printStackTrace();
         }
     }
 
@@ -132,20 +154,48 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void restartPlayerIn(int milliseconds) {
+    private void restartPlayerIn(final int milliseconds) {
         Log.e("TAVO -------->", "restartPlayerIn .......");
         if (!mMediaPlayer.isPlaying()) {
             Log.e("TAVO -------->", "NO PLaying restartPlayerIn .......");
-            new CountDownTimer(milliseconds, 1000) {
+            new CountDownTimer(milliseconds, milliseconds) {
                 @Override
                 public void onTick(long l) {
 
                 }
                 public void onFinish() {
-                    play();
+                    try{
+                        play();
+                    } catch (Exception ex) {
+                        Log.e("restartPlayerIn", "Error occured: " + ex.getMessage());
+                        restartPlayerIn(milliseconds);
+                    }
+
                 }
             }.start();
         }
+    }
+
+    private void checkPlayer(final int milliseconds) {
+        Log.i("checkPlayer", "Restaring in: " + milliseconds / 1000 + " seconds");
+
+        final long timeChangedCopy = timeChanged;
+
+        new CountDownTimer(milliseconds, milliseconds) {
+            @Override
+            public void onTick(long l) { }
+            public void onFinish() {
+                if (!playing || timeChangedCopy == timeChanged) {
+                    Log.i("checkPlayer", "not playing, restarting stream");
+                    try{
+                        play();
+                    } catch (Exception ex) {
+                        Log.i("checkPlayer", "Error occured: " + ex.getMessage());
+                    }
+                }
+                checkPlayer(milliseconds);
+            }
+        }.start();
     }
 
     private boolean checkAuthorization () {
