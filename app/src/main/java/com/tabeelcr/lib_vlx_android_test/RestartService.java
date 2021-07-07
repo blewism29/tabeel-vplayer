@@ -3,7 +3,6 @@ package com.tabeelcr.lib_vlx_android_test;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.os.CountDownTimer;
 import android.util.Log;
 
 import java.text.DateFormat;
@@ -20,10 +19,8 @@ public class RestartService {
 
     private Context context;
     private Intent intent;
-    private CountDownTimer countDownTimer;
     private final int dayInMilli = 24 * 60 * 60 * 1000;
     private Timer timer;
-    private boolean firstTime = false;
 
 
     public static RestartService getInstance () {
@@ -34,9 +31,10 @@ public class RestartService {
     }
 
     public void setTimer (Context context, Class pClass) throws ParseException {
+        Log.i("RestartService#setTimer", "Configuring restart");
         this.context = context;
         intent = new Intent(context, pClass);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        //intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
         String alarmTime = context.getString(R.string.restart_hour);
 
@@ -53,43 +51,23 @@ public class RestartService {
         if (timer != null) timer.cancel();
         timer = new Timer();
 
-        int period = dayInMilli;
-        timer.schedule(new RestartTask(), date, period);
-
-//        if (countDownTimer != null) countDownTimer.cancel();
-//        countDownTimer = new CountDownTimer(dayInMilli, dayInMilli) {
-//
-//            public void onTick(long millisUntilFinished) {
-//                Log.i("RestartService", "Tick");
-//            }
-//            public void onFinish() {
-//                Log.i("RestartService", "Restarting!");
-//                restart();
-//            }
-//        };
-//        countDownTimer.start();
+        timer.schedule(new RestartTask(), date);
     }
 
     private void restart () {
-
-//        if (!firstTime) {
-//            firstTime = true;
-//            return;
-//        }
-
-        context.startActivity(intent);
-        if (context instanceof Activity) {
-            ((Activity) context).finish();
+        if (context != null) {
+            context.startActivity(intent);
+            if (context instanceof Activity) {
+                ((Activity) context).finish();
+            }
+            context = null;
         }
-
-        Runtime.getRuntime().exit(0);
     }
 
     private RestartService () {}
 
     private static class RestartTask extends TimerTask
     {
-
         public void run()
         {
             Log.i("RestartTask", "running!!!... Restarting now!");

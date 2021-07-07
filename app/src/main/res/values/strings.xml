@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">Tabeel Video Player</string>
-    <string name="stream_url">https://rtmp.info/anexiontv/envivo/playlist.m3u8</string>
-    <string name="mac_address">A8:18:05:C1:A2:D9</string>
+    <string name="stream_url">http://k3.usastreams.com/CableLatino/88stereo/playlist.m3u8</string>
+    <string name="mac_address">A4:3E:A0:32:12:DC</string>
     <string name="unauthorized_message">Aplicación sin licencia, favor contactar al +50672274975</string>
-    <string name="restart_hour">00:01</string> <!-- In 24 hours -->
+    <string name="restart_hour">00:00</string> <!-- In 24 hours -->
 
 </resources>

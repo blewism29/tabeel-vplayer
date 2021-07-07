@@ -5,7 +5,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -20,7 +19,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.tabeelcr.lib_vlx_android_test.RestartService;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -31,15 +31,15 @@ public class MainActivity extends AppCompatActivity {
     private LibVLC mLibVLC;
     private MediaPlayer mMediaPlayer;
 
-    private long timeChanged;
     private boolean playing = false;
+    private Timer timer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        authorized = true; //checkAuthorization();
+        authorized = checkAuthorization();
 
         if (authorized) {
             final ArrayList<String> options = new ArrayList<>();
@@ -57,40 +57,54 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onEvent(MediaPlayer.Event event) {
                     switch (event.type) {
-                        case MediaPlayer.Event.Vout:
-                            Log.i("MediaPlayer.Event", "Vout");
-                        case MediaPlayer.Event.PositionChanged:
-                            Log.i("MediaPlayer.Event", "Paused");
                         case MediaPlayer.Event.Paused:
                             Log.i("MediaPlayer.Event", "Paused");
                             playing = false;
                         case MediaPlayer.Event.Playing:
                             Log.i("MediaPlayer.Event", "Playing");
                             playing = true;
-                        case MediaPlayer.Event.TimeChanged:
-                            if (timeChanged == event.getTimeChanged()) playing = false;
-                            timeChanged = event.getTimeChanged() != 0 ? event.getTimeChanged() : timeChanged;
-                            Log.i("MediaPlayer.Event", "TimeChanged " + event.getTimeChanged());
                         case MediaPlayer.Event.Buffering:
                             Log.i("MediaPlayer.Event", "Buffering");
                             break;
                         case MediaPlayer.Event.Stopped:
                             Log.i("MediaPlayer.Event", "Event Stopped ....... isPlaying: " + mMediaPlayer.isPlaying());
-                            restartPlayerIn(30000);
+                            playing = false;
                             break;
                         case MediaPlayer.Event.EncounteredError:
                             Log.i("MediaPlayer.Event", "Event EncounteredError ....... isPlaying: " + mMediaPlayer.isPlaying());
-                            restartPlayerIn(5000);
+                            playing = false;
                             break;
                         case MediaPlayer.Event.EndReached:
                             Log.i("MediaPlayer.Event", "Event EndReached ....... isPlaying: " + mMediaPlayer.isPlaying());
-                            restartPlayerIn(1000);
+                            playing = false;
                             break;
                     }
                 }
             });
 
-            checkPlayer(1000 * 90);
+            TimerTask task = new TimerTask() {
+                public void run() {
+                    Log.i("TimerTask", "Runnning recurrent task: " + !mMediaPlayer.isPlaying() + " | " + !playing);
+                    if (!mMediaPlayer.isPlaying() || !playing) {
+                        Log.i("task", "not playing, restarting stream");
+                        try{
+                            play();
+                        } catch (Exception ex) {
+                            Log.i("task", "Error occured: " + ex.getMessage());
+                        }
+                    }
+                }
+            };
+
+            timer = new Timer();
+            timer.schedule(task, 0, 1000 * 60 * 15); // each 15 min
+
+            try {
+                RestartService.getInstance().setTimer(this, MainActivity.class);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+
         } else {
             final String unauthorizedMessage = getString(R.string.unauthorized_message);
             Context context = getApplicationContext();
@@ -101,12 +115,6 @@ public class MainActivity extends AppCompatActivity {
 
             this.finishAffinity();
         }
-
-        try {
-            RestartService.getInstance().setTimer(this, MainActivity.class);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -114,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         if (authorized) {
+            timer.cancel();
             mMediaPlayer.release();
             mLibVLC.release();
         }
@@ -152,50 +161,6 @@ public class MainActivity extends AppCompatActivity {
 
             mMediaPlayer.play();
         }
-    }
-
-    private void restartPlayerIn(final int milliseconds) {
-        Log.e("TAVO -------->", "restartPlayerIn .......");
-        if (!mMediaPlayer.isPlaying()) {
-            Log.e("TAVO -------->", "NO PLaying restartPlayerIn .......");
-            new CountDownTimer(milliseconds, milliseconds) {
-                @Override
-                public void onTick(long l) {
-
-                }
-                public void onFinish() {
-                    try{
-                        play();
-                    } catch (Exception ex) {
-                        Log.e("restartPlayerIn", "Error occured: " + ex.getMessage());
-                        restartPlayerIn(milliseconds);
-                    }
-
-                }
-            }.start();
-        }
-    }
-
-    private void checkPlayer(final int milliseconds) {
-        Log.i("checkPlayer", "Restaring in: " + milliseconds / 1000 + " seconds");
-
-        final long timeChangedCopy = timeChanged;
-
-        new CountDownTimer(milliseconds, milliseconds) {
-            @Override
-            public void onTick(long l) { }
-            public void onFinish() {
-                if (!playing || timeChangedCopy == timeChanged) {
-                    Log.i("checkPlayer", "not playing, restarting stream");
-                    try{
-                        play();
-                    } catch (Exception ex) {
-                        Log.i("checkPlayer", "Error occured: " + ex.getMessage());
-                    }
-                }
-                checkPlayer(milliseconds);
-            }
-        }.start();
     }
 
     private boolean checkAuthorization () {
