@@ -13,6 +13,7 @@ import org.videolan.libvlc.Media;
 import org.videolan.libvlc.MediaPlayer;
 import org.videolan.libvlc.util.VLCVideoLayout;
 
+import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -33,6 +34,9 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean playing = false;
     private Timer timer;
+
+    private boolean internetAvailable = true;
+    private boolean restartPlayer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,12 +86,30 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-            TimerTask task = new TimerTask() {
+            TimerTask task =  new TimerTask() {
+                public void run() {
+                    Log.i("TimerTask network", "Runnning check network");
+                    if (!checkInternetConnection()) {
+                        Log.i("TimerTask network", "No network");
+                        restartPlayer = true;
+                        playing = false;
+                    }
+                }
+            };
+
+            timer = new Timer();
+            timer.schedule(task, 0, 1000 * 60); // each min
+
+            task = new TimerTask() {
                 public void run() {
                     Log.i("TimerTask", "Runnning recurrent task: " + !mMediaPlayer.isPlaying() + " | " + !playing);
-                    if (!mMediaPlayer.isPlaying() || !playing) {
-                        Log.i("task", "not playing, restarting stream");
+
+                    if (!checkAuthorization()) restartPlayer = true;
+
+                    if ((restartPlayer && checkInternetConnection()) || !mMediaPlayer.isPlaying() || !playing) {
+                        Log.i("task", "not playing, restarting stream "  + !mMediaPlayer.isPlaying() + " | " + !playing + " | " + restartPlayer + " | " + checkInternetConnection());
                         try{
+                            restartPlayer = false;
                             play();
                         } catch (Exception ex) {
                             Log.i("task", "Error occured: " + ex.getMessage());
@@ -97,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
             };
 
             timer = new Timer();
-            timer.schedule(task, 0, 1000 * 60 * 15); // each 15 min
+            timer.schedule(task, 0, 1000 * 60 * 10); // each 10 min
 
             try {
                 RestartService.getInstance().setTimer(this, MainActivity.class);
@@ -203,5 +225,15 @@ public class MainActivity extends AppCompatActivity {
             //handle exception
         }
         return "";
+    }
+
+    private boolean checkInternetConnection() {
+        try {
+            InetAddress ipAddr = InetAddress.getByName("google.com");
+            //You can replace it with your name
+            return !ipAddr.equals("");
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

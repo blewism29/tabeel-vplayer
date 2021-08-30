@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Tabeel Video Player</string>
     <string name="stream_url">http://k3.usastreams.com/CableLatino/88stereo/playlist.m3u8</string>
-    <string name="mac_address">A4:3E:A0:32:12:DC</string>
+    <string name="mac_address">36:C9:E3:F1:B8:05</string> <!-- A4:3E:A0:32:12:DC -->
     <string name="unauthorized_message">Aplicación sin licencia, favor contactar al +50672274975</string>
     <string name="restart_hour">00:00</string> <!-- In 24 hours -->
 
